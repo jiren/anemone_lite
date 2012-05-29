@@ -1,0 +1,6 @@
+*.swp
+Gemfile.lock
+test.db
+test.tch
+*.kch
+rdoc
