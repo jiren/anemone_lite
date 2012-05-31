@@ -9,11 +9,12 @@ module MongoLite
     end
 
     def initialize(attrs = {})
-      attrs['_id'] ||= BSON::ObjectId.new
+      attrs['_id'] = BSON::ObjectId.new
       @attributes = {}
 
       self.class._fields.each do |name, opt|
-        @attributes[name] = Db.conveter(opt[:type], attrs[name] || attrs[name.to_sym] || opt[:default])
+        val = attrs[name] || attrs[name.to_sym] 
+        @attributes[name] = Db.conveter(opt[:type], (val.nil? ? opt[:default] : val ))
       end
 
       yield self if block_given?

@@ -14,6 +14,9 @@ module Anemone
     # Hash of options for the crawl
     attr_reader :opts
 
+    #To stop crawler
+    @@stop_crawler = false
+
     DEFAULT_OPTS = {
       # run 4 Tentacle threads to fetch pages
       :threads => 4,
@@ -44,7 +47,9 @@ module Anemone
       # proxy server port number
       :proxy_port => false,
       # HTTP read timeout in seconds
-      :read_timeout => nil
+      :read_timeout => nil,
+      #time limit to check queue are empty
+      :queue_timeout => 300,
     }
 
     # Create setter methods for all options to be called from the crawl block
@@ -75,6 +80,10 @@ module Anemone
     def self.crawl(opts = {})
       crawler = self.new(opts)
       crawler.run
+    end
+
+    def self.stop_crawler?
+      @@stop_crawler
     end
 
     #
@@ -136,6 +145,8 @@ module Anemone
         @tentacles << Thread.new { Tentacle.new(@opts).run }
       end
 
+      start_time = Time.now.to_i
+
       loop do
         page = Page.deq
 
@@ -147,13 +158,26 @@ module Anemone
 
           links = links_to_follow page
           links.each do |link|
-            Link.create({:url => link, 
-                        :page_url => page.url.dup, 
-                        :depth => page.depth + 1})
+            Link.enq({:url => link, :page_url => page.url.dup, :depth => page.depth + 1})
           end
+
+          start_time = Time.now.to_i
         else
           #IF page queue empty then wait for random time.
-          sleep(rand(200)/100)
+          sleep(rand(0.02))
+
+          #If crawler idle for 5 min then check page and link queue are empty.
+          #If empty then stop tentacles thread and crawler infinite loop.
+          if (Time.now.to_i - start_time) > @opts[:queue_timeout]
+             
+             puts "Idle for more then #{@opts[:queue_timeout]}" if @opts[:verbose]
+
+             if Page.queue_empty? && Link.queue_empty?
+               @@stop_crawler = true
+               break
+             end
+          end
+
         end
       end
 

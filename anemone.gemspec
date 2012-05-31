@@ -5,7 +5,7 @@ spec = Gem::Specification.new do |s|
   s.homepage = "http://anemone.rubyforge.org"
   s.rubyforge_project = "anemone"
   s.platform = Gem::Platform::RUBY
-  s.summary = "Anemone web-spider framework"
+  s.summary = "Anemone Lite distributed web-spider framework"
   s.executables = %w[anemone]
   s.require_path = "lib"
   s.has_rdoc = true
@@ -18,12 +18,8 @@ spec = Gem::Specification.new do |s|
   s.add_development_dependency "rdoc", ">=3.12"
   s.add_development_dependency "rspec", ">=2.8.0"
   s.add_development_dependency "fakeweb", ">=1.3.0"
-  s.add_development_dependency "redis", ">=2.2.0"
   s.add_development_dependency "mongo", ">=1.3.1"
   s.add_development_dependency "bson_ext", ">=1.3.1"
-  s.add_development_dependency "tokyocabinet", ">=1.29"
-  s.add_development_dependency "kyotocabinet-ruby", ">=1.27.1"
-  s.add_development_dependency "sqlite3", ">=1.3.4"
 
   s.files = %w[
     VERSION

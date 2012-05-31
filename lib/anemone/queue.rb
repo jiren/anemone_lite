@@ -2,8 +2,8 @@ module Anemone
   module Queue
 
     NEW       = 0
-    INPROCESS = 1
-    PROCESSED = 2
+    PROCESSED = 1
+    #PROCESSED = 2
 
     def self.included(base)
       base.extend Anemone::Queue::ClassMethods
@@ -17,12 +17,17 @@ module Anemone
 
     module ClassMethods
       def deq
-        self.find_and_modify({:state => NEW}, {:state => INPROCESS})
+        self.find_and_modify({:state => NEW}, {:state => PROCESSED})
       end
 
       def enq(attrs)
         self.create(attrs) unless self.exists?(:url => attrs[:url].to_s)
       end
+
+      def queue_empty?
+        self.count(:state => NEW) == 0
+      end
+
     end
 
     module InstanceMethods

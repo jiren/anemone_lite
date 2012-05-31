@@ -7,10 +7,9 @@ describe Anemone do
     Anemone.const_defined?('VERSION').should == true
   end
 
-  it "should return a Anemone::Core from the crawl, which has a PageStore" do
-    result = Anemone.crawl(SPEC_DOMAIN)
+  it "should return a Anemone::Core from the crawl" do
+    result = Anemone::Core.new()
     result.should be_an_instance_of(Anemone::Core)
-    result.pages.should be_an_instance_of(Anemone::PageStore)
   end
 
 end

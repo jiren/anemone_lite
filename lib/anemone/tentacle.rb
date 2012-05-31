@@ -18,11 +18,11 @@ module Anemone
     def run
       loop do
         if link = Link.deq
-
           @http.fetch_pages(link.url, link.referer, link.depth)
-
           delay
         end
+        
+        break if Core.stop_crawler?
       end
     end
 

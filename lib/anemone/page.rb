@@ -3,6 +3,8 @@ module Anemone
     include MongoLite::Document
     include Anemone::Queue
 
+    collection :pages
+
     # The URL of the page
     field :url
     # The raw HTTP response body of the page
@@ -42,12 +44,15 @@ module Anemone
       attrs[:headers] ||= {}
       attrs[:headers]['content-type'] ||= ['']
       attrs[:headers] = Marshal.dump(attrs[:headers])
-      attrs[:redirect_to] = to_absolute(attrs[:redirect_to])
       attrs[:fetched] = !attrs[:code].nil?
       attrs[:state] ||= NEW
       attrs[:fetched_at] = Time.now
       #@aliases = Array(params[:aka]).compact
+
       super attrs
+
+      #After body initialize set redirect url
+      redirect_to = to_absolute(attrs[:redirect_to])
     end
 
     def headers

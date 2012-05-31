@@ -1,12 +1,15 @@
 $:.unshift(File.dirname(__FILE__))
 require 'spec_helper'
-%w[pstore tokyo_cabinet sqlite3].each { |file| require "anemone/storage/#{file}.rb" }
 
 module Anemone
   describe Core do
 
     before(:each) do
       FakeWeb.clean_registry
+      Page.remove
+      Link.remove
+
+      @opts = {:queue_timeout => 3}
     end
 
     shared_examples_for "crawl" do
@@ -17,7 +20,8 @@ module Anemone
         pages << FakePage.new('2')
         pages << FakePage.new('3')
 
-        Anemone.crawl(pages[0].url, @opts).should have(4).pages
+        Link.enq(:url => pages[0].url)
+        Anemone.crawl(@opts).should have(4).pages
       end
 
       it "should not follow links that leave the original domain" do
@@ -25,7 +29,8 @@ module Anemone
         pages << FakePage.new('0', :links => ['1'], :hrefs => 'http://www.other.com/')
         pages << FakePage.new('1')
 
-        core = Anemone.crawl(pages[0].url, @opts)
+        Link.enq(:url => pages[0].url)
+        core = Anemone.crawl(@opts)
 
         core.should have(2).pages
         core.pages.keys.should_not include('http://www.other.com/')
@@ -231,81 +236,16 @@ module Anemone
 
     end
 
-    describe Hash do
-      it_should_behave_like "crawl"
-
-      before(:all) do
-        @opts = {}
-      end
-    end
-
-    describe Storage::PStore do
-      it_should_behave_like "crawl"
-
-      before(:all) do
-        @test_file = 'test.pstore'
-      end
-
-      before(:each) do
-        File.delete(@test_file) if File.exists?(@test_file)
-        @opts = {:storage => Storage.PStore(@test_file)}
-      end
-
-      after(:each) do
-        File.delete(@test_file) if File.exists?(@test_file)
-      end
-    end
-
-    describe Storage::TokyoCabinet do
-      it_should_behave_like "crawl"
-
-      before(:all) do
-        @test_file = 'test.tch'
-      end
-
-      before(:each) do
-        File.delete(@test_file) if File.exists?(@test_file)
-        @opts = {:storage => @store = Storage.TokyoCabinet(@test_file)}
-      end
-
-      after(:each) do
-        @store.close
-      end
-
-      after(:each) do
-        File.delete(@test_file) if File.exists?(@test_file)
-      end
-    end
-
-    describe Storage::SQLite3 do
-      it_should_behave_like "crawl"
-
-      before(:all) do
-        @test_file = 'test.db'
-      end
-
-      before(:each) do
-        File.delete(@test_file) if File.exists?(@test_file)
-        @opts = {:storage => @store = Storage.SQLite3(@test_file)}
-      end
-
-      after(:each) do
-        @store.close
-      end
-
-      after(:each) do
-        File.delete(@test_file) if File.exists?(@test_file)
-      end
-    end
-
     describe "options" do
       it "should accept options for the crawl" do
-        core = Anemone.crawl(SPEC_DOMAIN, :verbose => false,
-                                          :threads => 2,
-                                          :discard_page_bodies => true,
-                                          :user_agent => 'test',
-                                          :obey_robots_txt => true,
-                                          :depth_limit => 3)
+        Link.enq(:url => SPEC_DOMAIN)
+        core = Anemone.crawl(:verbose => false,
+                             :threads => 2,
+                             :discard_page_bodies => true,
+                             :user_agent => 'test',
+                             :obey_robots_txt => true,
+                             :depth_limit => 3,
+                             :queue_timeout => 3)
 
         core.opts[:verbose].should == false
         core.opts[:threads].should == 2
@@ -316,27 +256,10 @@ module Anemone
         core.opts[:depth_limit].should == 3
       end
 
-      it "should accept options via setter methods in the crawl block" do
-        core = Anemone.crawl(SPEC_DOMAIN) do |a|
-          a.verbose = false
-          a.threads = 2
-          a.discard_page_bodies = true
-          a.user_agent = 'test'
-          a.obey_robots_txt = true
-          a.depth_limit = 3
-        end
-
-        core.opts[:verbose].should == false
-        core.opts[:threads].should == 2
-        core.opts[:discard_page_bodies].should == true
-        core.opts[:delay].should == 0
-        core.opts[:user_agent].should == 'test'
-        core.opts[:obey_robots_txt].should == true
-        core.opts[:depth_limit].should == 3
-      end
 
       it "should use 1 thread if a delay is requested" do
-        Anemone.crawl(SPEC_DOMAIN, :delay => 0.01, :threads => 2).opts[:threads].should == 1
+        Link.enq(:url => SPEC_DOMAIN)
+        Anemone.crawl(:delay => 0.01, :threads => 2, :queue_timeout => 2).opts[:threads].should == 1
       end
     end
 

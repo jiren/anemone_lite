@@ -21,7 +21,7 @@ module Anemone
     # Just gets the final destination page.
     #
     def fetch_page(url, referer = nil, depth = nil)
-      fetch_pages(url, referer, depth).last
+      fetch_pages(url, referer, depth)
     end
 
     #
@@ -41,7 +41,8 @@ module Anemone
                           :redirect_to => redirect_to,
                           :response_time => response_time)
 
-          page.links #Process links
+          #Process links
+          page.links 
           page.enq
         end
       rescue Exception => e
@@ -50,8 +51,7 @@ module Anemone
           puts e.backtrace
         end
         if page = Page[url]
-          page.state = Page::NEW
-          page.error = e.message
+          page.attributes = {:state => Page::NEW, :fetched => false, :error => e.message}
           page.save
         else
           Page.enq(:url => url, :error => e.message)

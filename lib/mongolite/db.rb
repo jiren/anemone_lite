@@ -16,7 +16,7 @@ module MongoLite
 
     class << self
 
-      def connect()
+      def connect
         return @connection if @connection
 
         options = DB_ENV[:mongo]
@@ -32,22 +32,14 @@ module MongoLite
         uri << "#{options[:host] || 'localhost'}:#{options[:port] || 27017}"
         uri << "/#{options[:database]}"
 
-        @connection = Mongo::Connection.from_uri(uri)[options[:database]]
+        other_opts = options.reject{|k, _| [:username, :password, :host, :port, :database].include?(k)}
+
+        @connection = Mongo::Connection.from_uri(uri, other_opts)[options[:database]]
       end
 
       def close_connection
         @connection.connection.close
       end
-
-=begin
-      def data_types
-        @data_types ||= {}
-      end
-
-      def register_data_type(type, to_db, from_db)
-        data_types[type.to_sym] = {:to_db => to_db, :from_db => from_db}
-      end
-=end
 
       def conveter(type, val)
         return val if val.nil?

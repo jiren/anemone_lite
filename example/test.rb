@@ -1,18 +1,14 @@
-DB_ENV = {:mongo => {:database => 'test'} }
-
-require 'yaml'
-#config = YAML.load_file("config.yaml")
-#DB_ENV = {:mongo => config[:anemone] }
+DB_ENV = {:mongo => {:database => 'test', :pool_size => 5} }
 
 require 'anemone'
 
 Anemone::Page.remove
 Anemone::Link.remove
 
-links = ['http://www.test.com/'].collect { |l|
-   Anemone::Link.create(:url => l)
+links = ['http://www.example.com/'].collect { |l|
+   Anemone::Link.enq(:url => l)
 }
 
-opts = {:verbose => true}
+opts = {:verbose => true, :queue_timeout => 20}
 
 Anemone::Core.crawl(opts)
