@@ -224,5 +224,15 @@ module Anemone
       page.to_absolute(upward_relative_path).should == URI("#{upward_base}#{relative_path}")      
     end
 
+    describe "#links" do
+      it "should not convert anchors to %23" do
+        @http.fetch_page(FakePage.new('', :body => '<a href="#top">Top</a>').url)
+
+        page = Page.deq
+        page.connected_links.should have(1).link
+        page.connected_links.first.to_s.should == SPEC_DOMAIN
+      end
+    end
+
   end
 end

@@ -30,10 +30,8 @@ module Anemone
     # Response time of the request for this page in milliseconds
     field :response_time, :Integer
 
-    field :connected_links, :Array
-
+    field :connected_links, :Array, :default => []
     field :fetched, :Boolean, :default => false
-
 
     create_index 'url'
 
@@ -71,7 +69,7 @@ module Anemone
       doc.search("//a[@href]").each do |a|
         u = a['href']
         next if u.nil? or u.empty?
-        abs = to_absolute(URI(URI.escape(u))) rescue next
+        abs = to_absolute(u) rescue next
         @page_links << abs if in_domain?(abs)
       end
       @page_links.uniq!
