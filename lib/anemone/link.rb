@@ -6,9 +6,8 @@ module Anemone
     collection :links
 
     field :url
-    field :page_url
-    field :depth, :Integer, :default => 0
     field :referer
+    field :depth, :Integer, :default => 0
 
     create_index 'url'
 

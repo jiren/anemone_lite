@@ -74,12 +74,16 @@ module MongoLite
         end
       end
 
+      def all
+        self.find
+      end
+
       def first(selector = {})
-        self.find({}, {:limit => -1}).first
+        self.find(selector, {:limit => -1}).first
       end
 
       def last(selector = {})
-        self.find({}, {:sort => [ :_id, :desc ]}).first
+        self.find(selector, {:sort => [ :_id, :desc ], :limit => 1}).first
       end
 
       def count(selector = {}, opts = {})

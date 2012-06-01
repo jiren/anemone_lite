@@ -186,7 +186,7 @@ module Anemone
     end
 
     def self.[](page_url)
-      Page.first(:url => page_url.to_s)
+      self.first(:url => page_url.to_s)
     end
 
   end

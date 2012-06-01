@@ -4,11 +4,14 @@ require 'forwardable'
 require 'nokogiri'
 require 'ostruct'
 require 'webrick/cookie'
+require 'net/https'
+require 'delegate'
 
 #Mongolite: Lightweight ODM
 require 'mongolite'
 
 #Lib
+require 'anemone/cookie_store'
 require 'anemone/queue'
 require 'anemone/exceptions'
 require 'anemone/tentacle'

@@ -6,13 +6,13 @@ module Anemone
 
     before(:each) do
       FakeWeb.clean_registry
-      Page.remove
       Link.remove
+      Page.remove
 
-      @opts = {:queue_timeout => 3}
+      @opts = {:queue_timeout => 2}
     end
 
-    shared_examples_for "crawl" do
+    describe "crawl" do
       it "should crawl all the html pages in a domain by following <a> href's" do
         pages = []
         pages << FakePage.new('0', :links => ['1', '2'])
@@ -21,7 +21,8 @@ module Anemone
         pages << FakePage.new('3')
 
         Link.enq(:url => pages[0].url)
-        Anemone.crawl(@opts).should have(4).pages
+        Anemone.crawl(@opts)
+        Page.count.should == 4
       end
 
       it "should not follow links that leave the original domain" do
@@ -30,10 +31,10 @@ module Anemone
         pages << FakePage.new('1')
 
         Link.enq(:url => pages[0].url)
-        core = Anemone.crawl(@opts)
+        Anemone.crawl(@opts)
 
-        core.should have(2).pages
-        core.pages.keys.should_not include('http://www.other.com/')
+        Page.count.should == 2
+        Page['http://www.other.com/'].should == nil
       end
 
       it "should not follow redirects that leave the original domain" do
@@ -41,10 +42,11 @@ module Anemone
         pages << FakePage.new('0', :links => ['1'], :redirect => 'http://www.other.com/')
         pages << FakePage.new('1')
 
-        core = Anemone.crawl(pages[0].url, @opts)
+        Link.enq(:url => pages[0].url)
+        Anemone.crawl(@opts)
 
-        core.should have(2).pages
-        core.pages.keys.should_not include('http://www.other.com/')
+        Page.count.should == 2
+        Page['http://www.other.com/'].should == nil
       end
 
       it "should follow http redirects" do
@@ -53,7 +55,9 @@ module Anemone
         pages << FakePage.new('1', :redirect => '2')
         pages << FakePage.new('2')
 
-        Anemone.crawl(pages[0].url, @opts).should have(3).pages
+        Link.enq(:url => pages[0].url)
+        Anemone.crawl(@opts)
+        Page.count.should == 3
       end
 
       it "should follow with HTTP basic authentication" do
@@ -61,7 +65,9 @@ module Anemone
         pages << FakePage.new('0', :links => ['1', '2'], :auth => true)
         pages << FakePage.new('1', :links => ['3'], :auth => true)
 
-        Anemone.crawl(pages.first.auth_url, @opts).should have(3).pages
+        Link.enq(:url => pages.first.auth_url)
+        Anemone.crawl(@opts)
+        Page.count.should == 3
       end
 
       it "should accept multiple starting URLs" do
@@ -71,7 +77,11 @@ module Anemone
         pages << FakePage.new('2', :links => ['3'])
         pages << FakePage.new('3')
 
-        Anemone.crawl([pages[0].url, pages[2].url], @opts).should have(4).pages
+        Link.enq(:url => pages[0].url)
+        Link.enq(:url => pages[2].url)
+
+        Anemone.crawl(@opts)
+        Page.count.should == 4
       end
 
       it "should include the query string when following links" do
@@ -80,10 +90,11 @@ module Anemone
         pages << FakePage.new('1?foo=1')
         pages << FakePage.new('1')
 
-        core = Anemone.crawl(pages[0].url, @opts)
+        Link.enq(:url => pages[0].url)
+        Anemone.crawl(@opts)
 
-        core.should have(2).pages
-        core.pages.keys.should_not include(pages[2].url)
+        Page.count.should == 2
+        Page[pages[2].url].should == nil
       end
 
       it "should be able to skip links with query strings" do
@@ -91,12 +102,13 @@ module Anemone
         pages << FakePage.new('0', :links => ['1?foo=1', '2'])
         pages << FakePage.new('1?foo=1')
         pages << FakePage.new('2')
-        
-        core = Anemone.crawl(pages[0].url, @opts) do |a|
+
+        Link.enq(:url => pages[0].url)
+        Anemone.crawl(@opts) do |a|
           a.skip_query_strings = true
         end
-        
-        core.should have(2).pages
+
+        Page.count.should == 2
       end
 
       it "should be able to skip links based on a RegEx" do
@@ -106,13 +118,14 @@ module Anemone
         pages << FakePage.new('2')
         pages << FakePage.new('3')
 
-        core = Anemone.crawl(pages[0].url, @opts) do |a|
+        Link.enq(:url => pages[0].url)
+        Anemone.crawl(@opts) do |a|
           a.skip_links_like /1/, /3/
         end
 
-        core.should have(2).pages
-        core.pages.keys.should_not include(pages[1].url)
-        core.pages.keys.should_not include(pages[3].url)
+        Page.count.should == 2
+        Page[pages[1].url] == nil
+        Page[pages[3].url] == nil
       end
 
       it "should be able to call a block on every page" do
@@ -122,7 +135,8 @@ module Anemone
         pages << FakePage.new('2')
 
         count = 0
-        Anemone.crawl(pages[0].url, @opts) do |a|
+        Link.enq(:url => pages[0].url)
+        Anemone.crawl(@opts) do |a|
           a.on_every_page { count += 1 }
         end
 
@@ -130,12 +144,14 @@ module Anemone
       end
 
       it "should not discard page bodies by default" do
-        Anemone.crawl(FakePage.new('0').url, @opts).pages.values#.first.doc.should_not be_nil
+        Link.enq(:url => FakePage.new('0').url)
+        Anemone.crawl(@opts)
+        Page.first.body.should_not be_nil
       end
 
       it "should optionally discard page bodies to conserve memory" do
-       # core = Anemone.crawl(FakePage.new('0').url, @opts.merge({:discard_page_bodies => true}))
-       # core.pages.values.first.doc.should be_nil
+        # core = Anemone.crawl(FakePage.new('0').url, @opts.merge({:discard_page_bodies => true}))
+        # core.pages.values.first.doc.should be_nil
       end
 
       it "should provide a focus_crawl method to select the links on each page to follow" do
@@ -144,12 +160,13 @@ module Anemone
         pages << FakePage.new('1')
         pages << FakePage.new('2')
 
-        core = Anemone.crawl(pages[0].url, @opts) do |a|
+        Link.enq(:url => pages[0].url)
+        core = Anemone.crawl(@opts) do |a|
           a.focus_crawl {|p| p.links.reject{|l| l.to_s =~ /1/}}
         end
 
-        core.should have(2).pages
-        core.pages.keys.should_not include(pages[1].url)
+        Page.count.should == 2
+        Page[pages[1].url].should == nil
       end
 
       it "should optionally delay between page requests" do
@@ -159,8 +176,9 @@ module Anemone
         pages << FakePage.new('0', :links => '1')
         pages << FakePage.new('1')
 
+        Link.enq(:url => pages[0].url)
         start = Time.now
-        Anemone.crawl(pages[0].url, @opts.merge({:delay => delay}))
+        Anemone.crawl(@opts.merge({:delay => delay}))
         finish = Time.now
 
         (finish - start).should satisfy {|t| t > delay * 2}
@@ -174,8 +192,9 @@ module Anemone
                               :body => "User-agent: *\nDisallow: /1",
                               :content_type => 'text/plain')
 
-        core = Anemone.crawl(pages[0].url, @opts.merge({:obey_robots_txt => true}))
-        urls = core.pages.keys
+        Link.enq(:url => pages[0].url)
+        core = Anemone.crawl(@opts.merge({:obey_robots_txt => true}))
+        urls = Page.all.collect(&:url)
 
         urls.should include(pages[0].url)
         urls.should_not include(pages[1].url)
@@ -183,14 +202,20 @@ module Anemone
 
       it "should be able to set cookies to send with HTTP requests" do
         cookies = {:a => '1', :b => '2'}
-        core = Anemone.crawl(FakePage.new('0').url) do |anemone|
+        page = FakePage.new('0')
+
+        Link.enq(:url => page.url)
+        core = Anemone.crawl(@opts) do |anemone|
           anemone.cookies = cookies
         end
         core.opts[:cookies].should == cookies
       end
 
       it "should freeze the options once the crawl begins" do
-        core = Anemone.crawl(FakePage.new('0').url) do |anemone|
+        page = FakePage.new('0')
+        Link.enq(:url => page.url)
+
+        core = Anemone.crawl(@opts) do |anemone|
           anemone.threads = 4
           anemone.on_every_page do
             lambda {anemone.threads = 2}.should raise_error
@@ -211,11 +236,12 @@ module Anemone
         end
 
         it "should track the page depth and referer" do
-          core = Anemone.crawl(@pages[0].url, @opts)
+          Link.enq(:url => @pages[0].url)
+          core = Anemone.crawl(@opts)
           previous_page = nil
 
           @pages.each_with_index do |page, i|
-            page = core.pages[page.url]
+            page = Page[page.url]
             page.should be
             page.depth.should == i
 
@@ -229,11 +255,12 @@ module Anemone
         end
 
         it "should optionally limit the depth of the crawl" do
-          core = Anemone.crawl(@pages[0].url, @opts.merge({:depth_limit => 3}))
-          core.should have(4).pages
+          Link.enq(:url => @pages[0].url)
+          core = Anemone.crawl(@opts.merge({:depth_limit => 3}))
+
+          Page.count.should == 4
         end
       end
-
     end
 
     describe "options" do
@@ -262,6 +289,5 @@ module Anemone
         Anemone.crawl(:delay => 0.01, :threads => 2, :queue_timeout => 2).opts[:threads].should == 1
       end
     end
-
   end
 end

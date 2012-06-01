@@ -1,5 +1,3 @@
-require 'delegate'
-require 'webrick/cookie'
 
 class WEBrick::Cookie
   def expired?

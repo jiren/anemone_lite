@@ -5,8 +5,8 @@ module Anemone
   #
   # Convenience method to start a crawl
   #
-  def Anemone.crawl(options = {})
-    Core.crawl(options)
+  def Anemone.crawl(options = {}, &block)
+    Core.crawl(options, &block)
   end
 
   class Core
@@ -78,7 +78,9 @@ module Anemone
     # Convenience method to start a new crawl
     #
     def self.crawl(opts = {})
-      crawler = self.new(opts)
+      crawler = self.new(opts) do |core|
+        yield core if block_given?
+      end
       crawler.run
     end
 
@@ -141,6 +143,10 @@ module Anemone
     def run
       process_options
 
+      #Set false beacuse if muntiple crawler running in same process then tentacles
+      #stop beacuse privious sub process set it false after complete
+      @@stop_crawler = false
+
       @opts[:threads].times do
         @tentacles << Thread.new { Tentacle.new(@opts).run }
       end
@@ -158,7 +164,7 @@ module Anemone
 
           links = links_to_follow page
           links.each do |link|
-            Link.enq({:url => link, :page_url => page.url.dup, :depth => page.depth + 1})
+            Link.enq({:url => link, :referer => page.url.dup, :depth => page.depth + 1})
           end
 
           start_time = Time.now.to_i
@@ -170,7 +176,7 @@ module Anemone
           #If empty then stop tentacles thread and crawler infinite loop.
           if (Time.now.to_i - start_time) > @opts[:queue_timeout]
              
-             puts "Idle for more then #{@opts[:queue_timeout]}" if @opts[:verbose]
+             puts "Idle for more then #{@opts[:queue_timeout]} and queues are empty." if @opts[:verbose]
 
              if Page.queue_empty? && Link.queue_empty?
                @@stop_crawler = true
@@ -225,7 +231,7 @@ module Anemone
     #
     def links_to_follow(page)
       links = @focus_crawl_block ? @focus_crawl_block.call(page) : page.links
-      links.select { |link| visit_link?(link, page) }.map { |link| link.dup }
+      links.select { |link| visit_link?(URI(link), page) }.map { |link| link.dup }
     end
 
     #

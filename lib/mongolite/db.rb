@@ -39,6 +39,7 @@ module MongoLite
 
       def close_connection
         @connection.connection.close
+        @connection = nil
       end
 
       def conveter(type, val)
