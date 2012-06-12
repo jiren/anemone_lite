@@ -20,6 +20,8 @@ module Anemone
         if link = Link.deq
           @http.fetch_pages(link.url, link.referer, link.depth)
           delay
+        else
+          sleep(rand(0.2))
         end
         
         break if Core.stop_crawler?

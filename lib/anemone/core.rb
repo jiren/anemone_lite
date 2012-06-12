@@ -170,7 +170,7 @@ module Anemone
           start_time = Time.now.to_i
         else
           #IF page queue empty then wait for random time.
-          sleep(rand(0.02))
+          sleep(rand(0.2))
 
           #If crawler idle for 5 min then check page and link queue are empty.
           #If empty then stop tentacles thread and crawler infinite loop.

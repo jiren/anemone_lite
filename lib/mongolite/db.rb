@@ -1,3 +1,6 @@
+#Connection String Format:
+#http://www.mongodb.org/display/DOCS/Connections
+#i.e "mongodb://localhost:27017/test"
 module MongoLite
   class Db
 
@@ -19,22 +22,21 @@ module MongoLite
       def connect
         return @connection if @connection
 
-        options = DB_ENV[:mongo]
-        options = options.inject({}){|i, h| i[h[0].to_sym] = h[1]; i}
+        options = {}
 
-        unless options[:database]
-          raise Exception.new('Mongolite Connection: Required database name.
-                            i.e MongoLite::Db.connect({"database" => "test"})')
+        db_name = if ENV.has_key?('MONGODB_URI') 
+                    options[:host] = "localhost"
+                    options[:port] = 27017
+                    ENV['MONGODB_URI'].split('/').last
+                  else
+                    'test'
+                  end
+
+        if ENV.has_key?('MONGODB_POOL_SIZE')
+          options[:pool_size] = ENV['MONGODB_POOL_SIZE'].to_i 
         end
 
-        uri = "mongodb://"
-        uri << "#{options[:username]}:#{options[:password]}" if(options[:username] || options[:password])
-        uri << "#{options[:host] || 'localhost'}:#{options[:port] || 27017}"
-        uri << "/#{options[:database]}"
-
-        other_opts = options.reject{|k, _| [:username, :password, :host, :port, :database].include?(k)}
-
-        @connection = Mongo::Connection.from_uri(uri, other_opts)[options[:database]]
+        @connection = Mongo::Connection.new(options.delete(:host), options.delete(:port), options)[db_name]
       end
 
       def close_connection

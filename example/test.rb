@@ -1,11 +1,17 @@
-DB_ENV = {:mongo => {:database => 'test', :pool_size => 5} }
+#Export variable 
+#i.e  export MONGODB_URI=mongodb://localhost:27017/test
+#     export MONGODB_POOL_SIZE=5      
+#
+
+ENV['MONGODB_URI'] = 'mongodb://localhost:27017/test'
+ENV['MONGODB_POOL_SIZE'] = "5"
 
 require 'anemone'
 
 Anemone::Page.remove
 Anemone::Link.remove
 
-links = ['http://www.example.com/'].collect { |l|
+['http://www.example.com/'].collect { |l|
    Anemone::Link.enq(:url => l)
 }
 
