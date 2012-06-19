@@ -33,7 +33,7 @@ module Anemone
     field :connected_links, :Array, :default => []
     field :fetched, :Boolean, :default => false
 
-    create_index 'url'
+    field :parse_status, :Integer, :default => 0
 
     #
     # Create a new page
@@ -45,7 +45,6 @@ module Anemone
       attrs[:fetched] = !attrs[:code].nil?
       attrs[:state] ||= NEW
       attrs[:fetched_at] = Time.now
-      #@aliases = Array(params[:aka]).compact
 
       super attrs
 

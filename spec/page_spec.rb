@@ -6,24 +6,24 @@ module Anemone
   describe "PageStorage" do
     before(:each) do
       Page.remove
-        @params = {:url => URI(SPEC_DOMAIN + 'queue'),
-          :body => "<html><body>test</body></html>",
-          :headers => {"content-type"=>["text/html"]},
-          :redirect_to => URI(SPEC_DOMAIN + 'home'),
-          :error => 'error',
-          :code => 200,
-          :visited => false,
-          :response_time => 200,
-          :connected_links => [SPEC_DOMAIN + 'link1'],
-          :depth => 1,
-          :fetched => true,
-          :referer => URI(SPEC_DOMAIN + 'referer'),
-          :code => 200}
+      @params = {:url => URI(SPEC_DOMAIN + 'queue'),
+        :body => "<html><body>test</body></html>",
+        :headers => {"content-type"=>["text/html"]},
+        :redirect_to => URI(SPEC_DOMAIN + 'home'),
+        :error => 'error',
+        :code => 200,
+        :visited => false,
+        :response_time => 200,
+        :connected_links => [SPEC_DOMAIN + 'link1'],
+        :depth => 1,
+        :fetched => true,
+        :referer => URI(SPEC_DOMAIN + 'referer'),
+        :code => 200}
     end
 
     it "should initalize page object with default values" do
       page = Page.new
-       
+
       page.depth.should == 0
       page.fetched.should == false
     end
@@ -35,9 +35,7 @@ module Anemone
         v = v.to_s if v.kind_of?(URI::HTTP)
         page.send(k).should == v
       end
-        
     end
-
 
   end
 
@@ -45,11 +43,15 @@ module Anemone
 
     before(:each) do
       FakeWeb.clean_registry
-      #Delete page collection
+      #Delete page and link collection
       Page.remove
+      Link.remove
 
-      @http = Anemone::HTTP.new
-      @http.fetch_page(FakePage.new('home', :links => '1').url)
+      @opts = {:link_fetch_attemps => 3}
+      @http = Anemone::HTTP.new(@opts)
+
+      Link.enq({:url => FakePage.new('home', :links => '1').url})
+      @http.fetch_page(Link.deq)
       @page = Page.deq
     end
 
@@ -57,23 +59,33 @@ module Anemone
       @page.should respond_to(:fetched?)
       @page.fetched?.should == true
 
-      fail_page = @http.fetch_page(SPEC_DOMAIN + 'fail')
-      fail_page.fetched?.should == false
+      Link.enq({:url => SPEC_DOMAIN + 'fail'})
+      @http.fetch_page(Link.deq)
+
+      link = Link[SPEC_DOMAIN + 'fail']
+      link.error.should_not be_nil
+      link.state.should == Link::NEW
     end
 
     it "should store and expose the response body of the HTTP request" do
       body = 'test'
-      @http.fetch_page(FakePage.new('body_test', {:body => body}).url)
+      fake_page = FakePage.new('body_test', {:body => body})
+      Link.enq({:url => fake_page.url})
+      @http.fetch_page(Link.deq)
       page = Page.deq
+
       page.body.should == body
     end
 
     it "should record any error that occurs during fetch_page" do
-      @page.should respond_to(:error)
-      @page.error.should be_nil
+      link = Link.enq({:url => SPEC_DOMAIN + 'error'})
+      link.should respond_to(:error) 
+      link.error.should be_nil
 
-      fail_page = @http.fetch_page(SPEC_DOMAIN + 'fail')
-      fail_page.error.should_not be_nil
+      @http.fetch_page(Link.deq)
+
+      link = Link[SPEC_DOMAIN + 'error']
+      link.error.should_not be_nil
     end
 
     it "should store the response headers when fetching a page" do
@@ -101,7 +113,9 @@ module Anemone
 
       @page.redirect?.should == false
 
-      @http.fetch_pages(FakePage.new('redir', :redirect => 'home').url)
+      Link.enq({:url => FakePage.new('redir', :redirect => 'home').url})
+      @http.fetch_pages(Link.deq)
+
       Page.deq.redirect?.should == true
     end
 
@@ -121,49 +135,6 @@ module Anemone
       @page.cookies.should == []
     end
 
-=begin
-    describe "#to_hash" do
-      it "converts the page to a hash" do
-        hash = @page.to_hash
-        hash['url'].should == @page.url.to_s
-        hash['referer'].should == @page.referer.to_s
-        hash['links'].should == @page.links.map(&:to_s)
-      end
-
-      context "when redirect_to is nil" do
-        it "sets 'redirect_to' to nil in the hash" do
-          @page.redirect_to.should be_nil
-          @page.to_hash[:redirect_to].should be_nil
-        end
-      end
-
-      context "when redirect_to is a non-nil URI" do
-        it "sets 'redirect_to' to the URI string" do
-          new_page = Page.new(URI(SPEC_DOMAIN), {:redirect_to => URI(SPEC_DOMAIN + '1')})
-          new_page.redirect_to.to_s.should == SPEC_DOMAIN + '1'
-          new_page.to_hash['redirect_to'].should == SPEC_DOMAIN + '1'
-        end
-      end
-    end
-
-    describe "#from_hash" do
-      it "converts from a hash to a Page" do
-        page = @page.dup
-        page.depth = 1
-        converted = Page.from_hash(page.to_hash)
-        converted.links.should == page.links
-        converted.depth.should == page.depth
-      end
-
-      it 'handles a from_hash with a nil redirect_to' do
-        page_hash = @page.to_hash
-        page_hash['redirect_to'] = nil
-        lambda{Page.from_hash(page_hash)}.should_not raise_error(URI::InvalidURIError)
-        Page.from_hash(page_hash).redirect_to.should be_nil
-      end
-    end
-=end
-
     describe "#redirect_to" do
       context "when the page was a redirect" do
         it "returns a URI of the page it redirects to" do
@@ -176,7 +147,10 @@ module Anemone
 
     it "should detect, store and expose the base url for the page head" do
       base = "#{SPEC_DOMAIN}path/to/base_url/"
-      @http.fetch_page(FakePage.new('body_test', {:base => base}).url)
+
+      Link.enq({:url => FakePage.new('body_test', {:base => base}).url})
+
+      @http.fetch_page(Link.deq)
       page = Page.deq
       page.base.should == URI(base)
       @page.base.should be_nil
@@ -196,7 +170,8 @@ module Anemone
       relative_path = "a/relative/path"
       @page.to_absolute(relative_path).should == URI("#{SPEC_DOMAIN}#{relative_path}")
       
-      @http.fetch_page(FakePage.new('home/deep', :links => '1').url)
+      Link.enq({:url => FakePage.new('home/deep', :links => '1').url})
+      @http.fetch_page(Link.deq)
       deep_page = Page.deq
       upward_relative_path = "../a/relative/path"
       deep_page.to_absolute(upward_relative_path).should == URI("#{SPEC_DOMAIN}#{relative_path}")
@@ -204,7 +179,8 @@ module Anemone
       # The base URL case
       base_path = "path/to/base_url/"
       base = "#{SPEC_DOMAIN}#{base_path}"
-      @http.fetch_page(FakePage.new('home/base', {:base => base}).url)
+      Link.enq({:url => FakePage.new('home/base', {:base => base}).url})
+      @http.fetch_page(Link.deq)
       page = Page.deq
       
       # Identity
@@ -226,7 +202,8 @@ module Anemone
 
     describe "#links" do
       it "should not convert anchors to %23" do
-        @http.fetch_page(FakePage.new('', :body => '<a href="#top">Top</a>').url)
+        Link.enq({:url => FakePage.new('', :body => '<a href="#top">Top</a>').url})
+        @http.fetch_page(Link.deq)
 
         page = Page.deq
         page.connected_links.should have(1).link

@@ -9,7 +9,7 @@ module Anemone
       Link.remove
       Page.remove
 
-      @opts = {:queue_timeout => 2}
+      @opts = {:queue_timeout => 1}
     end
 
     describe "crawl" do
@@ -65,9 +65,9 @@ module Anemone
         pages << FakePage.new('0', :links => ['1', '2'], :auth => true)
         pages << FakePage.new('1', :links => ['3'], :auth => true)
 
-        Link.enq(:url => pages.first.auth_url)
+        Link.enq(:url => pages[0].auth_url)
         Anemone.crawl(@opts)
-        Page.count.should == 3
+        Page.count.should == 2
       end
 
       it "should accept multiple starting URLs" do

@@ -16,42 +16,43 @@ module Anemone
     # Fetch a single Page from the response of an HTTP request to *url*.
     # Just gets the final destination page.
     #
-    def fetch_page(url, referer = nil, depth = nil)
-      fetch_pages(url, referer, depth)
+    def fetch_page(link)
+      fetch_pages(link)
     end
 
     #
     # Create new Pages from the response of an HTTP request to *url*,
     # including redirects
     #
-    def fetch_pages(url, referer = nil, depth = nil)
+    def fetch_pages(link)
       begin
-        url = URI(url) unless url.is_a?(URI)
-        get(url, referer) do |response, code, location, redirect_to, response_time|
-          page = Page.new(:url => location, 
-                          :body => response.body.dup,
-                          :code => code,
-                          :headers => response.to_hash,
-                          :referer => referer,
-                          :depth => depth,
-                          :redirect_to => redirect_to,
+        url = URI(link.url) unless link.url.is_a?(URI)
+        get(url, link.referer) do |response, code, location, redirect_to, response_time|
+          page = Page.new(:url           => location, 
+                          :body          => response.body.dup,
+                          :code          => code,
+                          :headers       => response.to_hash,
+                          :referer       => link.referer,
+                          :depth         => link.depth,
+                          :redirect_to   => redirect_to,
                           :response_time => response_time)
 
           #Process links
           page.links 
-          page.enq
+          page.save
         end
       rescue Exception => e
         if verbose?
           puts e.inspect
           puts e.backtrace
         end
-        if page = Page[url]
-          page.attributes = {:state => Page::NEW, :fetched => false, :error => e.message}
-          page.save
-        else
-          Page.enq(:url => url, :error => e.message)
+
+        #Enq link if it not reach to max fetch treshold
+        if @opts[:link_fetch_attemps] > link.fetch_attempts
+          link.attributes = {:state => Link::NEW, :error => e.message, :fetch_attempts => (link.fetch_attempts + 1)}
+          link.save
         end
+
       end
     end
 

@@ -11,8 +11,8 @@ module Anemone
 
       base.send :field, :state, :Integer, :default => NEW 
       base.send :field, :fetched_at, :Time
-      base.send :field, :process_id, :Integer, :default => $$
-      base.send :field, :host_name, :default => Socket.gethostname
+      #base.send :field, :process_id, :Integer, :default => $$
+      #base.send :field, :host_name, :default => Socket.gethostname
     end
 
     module ClassMethods
@@ -27,7 +27,6 @@ module Anemone
       def queue_empty?
         self.count(:state => NEW) == 0
       end
-
     end
 
     module InstanceMethods

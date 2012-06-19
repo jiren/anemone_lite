@@ -9,7 +9,7 @@ module MongoLite
     end
 
     def initialize(attrs = {})
-      attrs['_id'] = BSON::ObjectId.new
+      attrs['_id'] ||= BSON::ObjectId.new
       @attributes = {}
 
       self.class._fields.each do |name, opt|

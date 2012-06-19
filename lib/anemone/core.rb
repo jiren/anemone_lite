@@ -50,6 +50,8 @@ module Anemone
       :read_timeout => nil,
       #time limit to check queue are empty
       :queue_timeout => 300,
+      #Max link fetch attemps
+      :link_fetch_attemps => 3
     }
 
     # Create setter methods for all options to be called from the crawl block
@@ -157,7 +159,7 @@ module Anemone
         page = Page.deq
 
         if page
-          puts "Proccessing: #{page.url}" if @opts[:verbose]
+          puts "Fetched: #{page.url}" if @opts[:verbose]
 
           do_page_blocks page
           page.discard_doc!  if @opts[:discard_page_bodies]
@@ -170,7 +172,7 @@ module Anemone
           start_time = Time.now.to_i
         else
           #IF page queue empty then wait for random time.
-          sleep(rand(0.2))
+          sleep(rand(1.0))
 
           #If crawler idle for 5 min then check page and link queue are empty.
           #If empty then stop tentacles thread and crawler infinite loop.

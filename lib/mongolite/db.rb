@@ -25,8 +25,9 @@ module MongoLite
         options = {}
 
         db_name = if ENV.has_key?('MONGODB_URI') 
-                    options[:host] = "localhost"
-                    options[:port] = 27017
+                    mongo_url = Mongo::URIParser.new ENV['MONGODB_URI']
+                    options[:host] = mongo_url.nodes.first[0]
+                    options[:port] = mongo_url.nodes.first[1]
                     ENV['MONGODB_URI'].split('/').last
                   else
                     'test'

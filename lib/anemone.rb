@@ -18,3 +18,6 @@ require 'anemone/tentacle'
 require 'anemone/core'
 require 'anemone/page'
 require 'anemone/link'
+
+#Admin: crawler state
+require 'admin/crawler'
