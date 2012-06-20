@@ -20,4 +20,4 @@ require 'anemone/page'
 require 'anemone/link'
 
 #Admin: crawler state
-require 'admin/crawler'
+require 'anemone/admin/crawler'

@@ -21,9 +21,8 @@ opts = {:verbose => true, :queue_timeout => 20}
 
 
 puts "**** Start Time: #{Time.now} ****"
+puts "Process Id: #{$$}"
 
-begin
-  Anemone::Core.crawl(opts)
-rescue Exception => e
-  puts "End Time: #{Time.now} ****"
-end
+Anemone::Core.crawl(opts)
+
+puts "End Time: #{Time.now} ****"

@@ -49,7 +49,7 @@ module Anemone
       # HTTP read timeout in seconds
       :read_timeout => nil,
       #time limit to check queue are empty
-      :queue_timeout => 300,
+      :queue_timeout => 180,
       #Max link fetch attemps
       :link_fetch_attemps => 3
     }
@@ -83,11 +83,24 @@ module Anemone
       crawler = self.new(opts) do |core|
         yield core if block_given?
       end
-      crawler.run
+
+      begin
+        Admin::Crawler.register 
+        crawler.run
+      rescue Exception => e
+        puts e.message
+      ensure
+        puts '**** Exiting ****'
+        Admin::Crawler.unregister(e)
+      end
     end
 
     def self.stop_crawler?
       @@stop_crawler
+    end
+
+    def self.stop_crawler
+      @@stop_crawler = true
     end
 
     #
@@ -144,6 +157,7 @@ module Anemone
     #
     def run
       process_options
+      register_stop_signal_handlers
 
       #Set false beacuse if muntiple crawler running in same process then tentacles
       #stop beacuse privious sub process set it false after complete
@@ -172,19 +186,20 @@ module Anemone
           start_time = Time.now.to_i
         else
           #IF page queue empty then wait for random time.
-          sleep(rand(1.0))
+          sleep(1)
 
-          #If crawler idle for 5 min then check page and link queue are empty.
+          #If crawler idle for 3 min then check page and link queue are empty.
           #If empty then stop tentacles thread and crawler infinite loop.
           if (Time.now.to_i - start_time) > @opts[:queue_timeout]
              
              puts "Idle for more then #{@opts[:queue_timeout]} and queues are empty." if @opts[:verbose]
 
              if Page.queue_empty? && Link.queue_empty?
-               @@stop_crawler = true
-               break
+               self.class.stop_crawler
              end
           end
+
+          break if self.class.stop_crawler?
 
         end
       end
@@ -201,6 +216,12 @@ module Anemone
       @robots = Robotex.new(@opts[:user_agent]) if @opts[:obey_robots_txt]
 
       freeze_options
+    end
+
+    # TERM, INT : stop crawler.
+    def register_stop_signal_handlers
+      trap('TERM') { puts 'TERM signal'; self.class.stop_crawler }
+      trap('INT')  { puts 'INT signal'; self.class.stop_crawler }
     end
 
     #
