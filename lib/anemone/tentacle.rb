@@ -21,7 +21,7 @@ module Anemone
           @http.fetch_pages(link)
           delay
         else
-          sleep(2)
+          sleep(2.0)
         end
         
         break if Core.stop_crawler?

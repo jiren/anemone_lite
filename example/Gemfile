@@ -1,5 +1,6 @@
 source :rubygems
 
-gem "anemone", :git => "git@github.com:jiren/anemone_lite.git"
+#gem "anemone", :git => "git@github.com:jiren/anemone_lite.git"
+gem 'anemone', :path => "../"
 gem "mongo"
 gem "bson_ext"

@@ -186,7 +186,7 @@ module Anemone
           start_time = Time.now.to_i
         else
           #IF page queue empty then wait for random time.
-          sleep(1)
+          sleep(1.0)
 
           #If crawler idle for 3 min then check page and link queue are empty.
           #If empty then stop tentacles thread and crawler infinite loop.
@@ -221,7 +221,7 @@ module Anemone
     # TERM, INT : stop crawler.
     def register_stop_signal_handlers
       trap('TERM') { puts 'TERM signal'; self.class.stop_crawler }
-      trap('INT')  { puts 'INT signal'; self.class.stop_crawler }
+      trap('INT') { puts 'INT signal'; self.class.stop_crawler }
     end
 
     #
