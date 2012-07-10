@@ -3,7 +3,7 @@ module Anemone
     include MongoLite::Document
     include Anemone::Queue
 
-    collection :pages
+    set_collection({:name => :pages})
 
     # The URL of the page
     field :url
@@ -21,7 +21,7 @@ module Anemone
     # Integer response code of the page
     field :code, :Integer
     # Boolean indicating whether or not this page has been visited in PageStore#shortest_paths!
-    field :visited, :Boolean
+    #field :visited, :Boolean
     # Depth of this page from the root of the crawl. This is not necessarily the
     # shortest path; use PageStore#shortest_paths! to find that value.
     field :depth, :Integer, :default => 0
@@ -31,29 +31,29 @@ module Anemone
     field :response_time, :Integer
 
     field :connected_links, :Array, :default => []
-    field :fetched, :Boolean, :default => false
-
     field :parse_status, :Integer, :default => 0
+
+    index :url
+    index :parse_status, {:background => true}
 
     #
     # Create a new page
     #
-    def initialize(attrs = {})
-      attrs[:headers] ||= {}
-      attrs[:headers]['content-type'] ||= ['']
-      attrs[:headers] = Marshal.dump(attrs[:headers])
-      attrs[:fetched] = !attrs[:code].nil?
-      attrs[:state] ||= NEW
-      attrs[:fetched_at] = Time.now
+    def initialize(attrs = {}, from_db = false)
+      unless from_db
+        attrs[:headers] ||= {}
+        attrs[:headers]['content-type'] ||= ['']
+        attrs[:headers] = Marshal.dump(attrs[:headers])
+      end
 
-      super attrs
+      super attrs, from_db
 
       #After body initialize set redirect url
-      redirect_to = to_absolute(attrs[:redirect_to])
+      redirect_to = to_absolute(attrs[:redirect_to]) unless from_db
     end
 
     def headers
-      Marshal.load(attributes['headers'].to_s)
+      Marshal.load(attributes[:headers].to_s)
     end
 
     #
@@ -81,7 +81,7 @@ module Anemone
     #
     def doc
       return @doc if @doc
-      @doc = Nokogiri::HTML(body) if body && html? #rescue nil
+      @doc = Nokogiri::HTML(self.body) if self.body && html? #rescue nil
     end
 
     #
@@ -98,11 +98,9 @@ module Anemone
     # +true+ if the page was fetched with no error, +false+ otherwise.
     #
     def fetched?
-      fetched
+      state == PROCESSED
     end
     
-    #alias :'fetched?', :fetched
-
     #
     # Array of cookies received with this page as WEBrick::Cookie objects.
     #
@@ -182,8 +180,15 @@ module Anemone
       uri.host == URI(url).host
     end
 
+    #Page find by url
     def self.[](page_url)
       self.first(:url => page_url.to_s)
+    end
+
+    def self.process_headers(attrs)
+      attrs[:headers] ||= {}
+      attrs[:headers]['content-type'] ||= ['']
+      attrs[:headers] = Marshal.dump(attrs[:headers])
     end
 
   end

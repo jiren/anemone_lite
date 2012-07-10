@@ -6,7 +6,7 @@ module Anemone
       #Sates
       RUNNING, STOPED = 0, 1
 
-      collection :crawlers
+      set_collection({:name => :crawlers, :database => :process_admin})
 
       field :process_id, :Integer, :default => $$
       field :host_name, :default => Socket.gethostname

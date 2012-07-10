@@ -1,5 +1,8 @@
-ENV['MONGODB_URI'] = 'mongodb://localhost:27017/test'
-ENV['MONGODB_POOL_SIZE'] = "5"
+#Export variable 
+#i.e  export CRAWLER='db_config:config/mongo.yml,env:development'
+
+#For test only
+ENV['CRAWLER'] = 'db_config:config/mongo.yml,env:development'
 
 require 'rubygems'
 require 'bundler/setup'

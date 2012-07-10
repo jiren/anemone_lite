@@ -1,0 +1,11 @@
+defaluts: &defaults
+  databases:
+    process_admin:
+      uri: "mongodb://localhost:27017/process_admin_test"
+
+test:
+  <<: *defaults
+  uri: "mongodb://localhost:27017/test"
+  pool_size: 5
+
+

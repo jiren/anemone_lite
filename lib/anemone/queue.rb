@@ -3,7 +3,6 @@ module Anemone
 
     NEW       = 0
     PROCESSED = 1
-    #PROCESSED = 2
 
     def self.included(base)
       base.extend Anemone::Queue::ClassMethods
@@ -11,8 +10,6 @@ module Anemone
 
       base.send :field, :state, :Integer, :default => NEW 
       base.send :field, :fetched_at, :Time
-      #base.send :field, :process_id, :Integer, :default => $$
-      #base.send :field, :host_name, :default => Socket.gethostname
     end
 
     module ClassMethods
@@ -32,6 +29,7 @@ module Anemone
     module InstanceMethods
 
       def enq
+        #self.class.collection.update({:url => url}, self.attributes, true)
         self.save unless self.class.exists?(:url => url)
       end
 

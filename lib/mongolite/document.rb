@@ -4,38 +4,51 @@ module MongoLite
     def self.included(base)
       base.extend MongoLite::Document::ClassMethods
       base.send(:include, MongoLite::Document::InstanceMethods)
+
+      #Set default db collection
+      base.set_collection
       base.instance_variable_set('@_fields', {})
       base.send :field, :_id, :Id
     end
 
-    def initialize(attrs = {})
+    def initialize(attrs = {}, from_db = false)
       attrs['_id'] ||= BSON::ObjectId.new
       @attributes = {}
 
       self.class._fields.each do |name, opt|
-        val = attrs[name] || attrs[name.to_sym] 
-        @attributes[name] = Db.conveter(opt[:type], (val.nil? ? opt[:default] : val ))
+        val = attrs[name] || attrs[name.to_s] || opt[:default]
+        @attributes[name] = Db.conveter(opt[:type], val)
       end
 
       yield self if block_given?
     end
 
     module ClassMethods
-      extend Forwardable
+      #extend Forwardable
+      #def_delegators :collection, :update, :create_index, :remove
+      #alias :index :create_index
 
-      def_delegators :collection, :create_index, :update, :remove
+      def set_collection(opts = {:name => nil, :database => nil})
+        opts[:name] ||= self.name.split('::').last.downcase
+
+        @_collection = if opts[:database].nil?
+                         MongoLite::Db.connection[opts[:name]]
+                       else
+                         MongoLite::Db.secondary_connections(opts[:database])[opts[:name]]
+                       end
+      end
+
+      def collection
+        @_collection # ||= MongoLite::Db.connect[name || self.name.split('::').last.downcase]
+      end
 
       def _fields
         @_fields
       end
 
-      def collection(name = nil)
-        @_collection ||= MongoLite::Db.connect[name || self.name.split('::').last.downcase]
-      end
-
       def field(name, type = :String, opts = {} )
-        name = name.to_s
-         
+        name = name.to_sym
+
         if type.kind_of?(Hash)
           opts, type = type, :String
         end
@@ -44,9 +57,9 @@ module MongoLite
         @_fields[name] = opts
 
         field_method_reader = if type == :Binary
-                                "@attributes['#{name}'].to_s"
+                                "@attributes[:#{name}].to_s"
                               else
-                                "@attributes['#{name}']"
+                                "@attributes[:#{name}]"
                               end
 
         class_eval <<-METHOD, __FILE__, __LINE__ + 1
@@ -57,7 +70,7 @@ module MongoLite
 
         class_eval <<-METHOD, __FILE__, __LINE__ + 1
           def #{name}=(val)
-            @attributes['#{name}'] = Db.conveter(self.class._fields['#{name}'][:type], val)
+            @attributes[:#{name}] = Db.conveter(self.class._fields[:#{name}][:type], val)
           end
         METHOD
       end
@@ -70,7 +83,7 @@ module MongoLite
         selector = {:_id => Db.conveter(:Id, selector)} unless selector.kind_of?(Hash)
 
         self.collection.find(selector, opts).collect do |attrs|
-          self.new(attrs)
+          self.new(attrs, true)
         end
       end
 
@@ -99,8 +112,19 @@ module MongoLite
           :query => selector,
           :update => {'$set' => document },
           :new => true})
-        attrs ? self.new(attrs) : nil
+
+        attrs ? self.new(attrs, true) : nil
       end
+
+      %w(update remove create_index).each do |m|
+        class_eval <<-METHOD, __FILE__, __LINE__ + 1
+          def #{m}(*args)
+            @_collection.#{m}(*args)
+          end
+        METHOD
+      end
+
+      alias :index :create_index 
 
     end
 
@@ -112,7 +136,7 @@ module MongoLite
 
       def attributes=(attrs = {})
         attrs.each do |field_name, val|
-          field_name = field_name.to_s
+          field_name = field_name.to_sym
           @attributes[field_name] = Db.conveter(self.class._fields[field_name][:type], val) 
         end
       end
@@ -124,7 +148,7 @@ module MongoLite
 
       def update(attrs = {}, opts = {})
         self.attributes = attrs
-        self.save
+        self.class.collection.update({:_id => self._id}, self.attributes)
       end
 
       def destroy(opts = {})

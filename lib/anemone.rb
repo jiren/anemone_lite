@@ -12,10 +12,11 @@ require 'mongolite'
 
 #Lib
 require 'anemone/cookie_store'
-require 'anemone/queue'
 require 'anemone/exceptions'
 require 'anemone/tentacle'
+require 'anemone/http'
 require 'anemone/core'
+require 'anemone/queue'
 require 'anemone/page'
 require 'anemone/link'
 

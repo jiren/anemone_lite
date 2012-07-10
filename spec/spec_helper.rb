@@ -5,8 +5,7 @@ require File.dirname(__FILE__) + '/fakeweb_helper'
 
 $:.unshift(File.dirname(__FILE__) + '/../lib/')
 
-ENV['MONGODB_URI'] = 'mongodb://localhost:27017/test'
-ENV['MONGODB_POOL_SIZE'] = "5"
+ENV['CRAWLER'] = 'db_config:spec/config/mongo.yml,env:test'
 
 SPEC_DOMAIN = 'http://www.example.com/'
 

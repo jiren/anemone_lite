@@ -49,7 +49,7 @@ module Anemone
       # HTTP read timeout in seconds
       :read_timeout => nil,
       #time limit to check queue are empty
-      :queue_timeout => 180,
+      :queue_timeout => 120,
       #Max link fetch attemps
       :link_fetch_attemps => 3
     }
@@ -167,7 +167,7 @@ module Anemone
         @tentacles << Thread.new { Tentacle.new(@opts).run }
       end
 
-      start_time = Time.now.to_i
+      start_time = Time.now
 
       loop do
         page = Page.deq
@@ -180,17 +180,17 @@ module Anemone
 
           links = links_to_follow page
           links.each do |link|
-            Link.enq({:url => link, :referer => page.url.dup, :depth => page.depth + 1})
+            Link.enq({:url => link, :referer => page.url.dup, :depth => page.depth + 1, :fetched_at => Time.now})
           end
 
-          start_time = Time.now.to_i
+          start_time = Time.now
         else
           #IF page queue empty then wait for random time.
           sleep(1.0)
 
           #If crawler idle for 3 min then check page and link queue are empty.
           #If empty then stop tentacles thread and crawler infinite loop.
-          if (Time.now.to_i - start_time) > @opts[:queue_timeout]
+          if (Time.now - start_time) > @opts[:queue_timeout]
              
              puts "Idle for more then #{@opts[:queue_timeout]} and queues are empty." if @opts[:verbose]
 
@@ -253,8 +253,8 @@ module Anemone
     # and the block given to focus_crawl()
     #
     def links_to_follow(page)
-      links = @focus_crawl_block ? @focus_crawl_block.call(page) : page.links
-      links.select { |link| visit_link?(URI(link), page) }.map { |link| link.dup }
+      links = @focus_crawl_block ? @focus_crawl_block.call(page) : page.connected_links
+      links.select { |link| visit_link?(URI(link), page) } #.map { |link| link.dup }
     end
 
     #

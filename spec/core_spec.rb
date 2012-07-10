@@ -9,7 +9,7 @@ module Anemone
       Link.remove
       Page.remove
 
-      @opts = {:queue_timeout => 1}
+      @opts = {:queue_timeout => 3}
     end
 
     describe "crawl" do
@@ -240,8 +240,9 @@ module Anemone
           core = Anemone.crawl(@opts)
           previous_page = nil
 
-          @pages.each_with_index do |page, i|
-            page = Page[page.url]
+          @pages.each_with_index do |f_page, i|
+            page = Page[f_page.url]
+
             page.should be
             page.depth.should == i
 

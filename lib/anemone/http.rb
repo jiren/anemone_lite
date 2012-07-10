@@ -26,7 +26,7 @@ module Anemone
     #
     def fetch_pages(link)
       begin
-        url = URI(link.url) unless link.url.is_a?(URI)
+        url = URI(link.url) #unless link.url.is_a?(URI)
         get(url, link.referer) do |response, code, location, redirect_to, response_time|
           page = Page.new(:url           => location, 
                           :body          => response.body.dup,
@@ -35,11 +35,11 @@ module Anemone
                           :referer       => link.referer,
                           :depth         => link.depth,
                           :redirect_to   => redirect_to,
-                          :response_time => response_time)
-
+                          :response_time => response_time,
+                          :fetched_at    => Time.now)
           #Process links
           page.links 
-          page.save
+          page.enq
         end
       rescue Exception => e
         if verbose?

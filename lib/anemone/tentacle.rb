@@ -1,5 +1,3 @@
-require 'anemone/http'
-
 module Anemone
   class Tentacle
 

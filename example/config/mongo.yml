@@ -1,0 +1,21 @@
+defaluts: &defaults
+  databases:
+    process_admin:
+      uri: "mongodb://localhost:27017/process_admin"
+
+development:
+  <<: *defaults
+  uri: "mongodb://localhost:27017/test"
+  pool_size: 5
+
+staging:
+  <<: *defaults
+  uri: "mongodb://localhost:27017/test"
+  pool_size: 5
+
+production:
+  <<: *defaults
+  uri: "mongodb://localhost:27017/test"
+  pool_size: 5
+
+

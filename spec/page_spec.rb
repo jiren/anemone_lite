@@ -12,11 +12,9 @@ module Anemone
         :redirect_to => URI(SPEC_DOMAIN + 'home'),
         :error => 'error',
         :code => 200,
-        :visited => false,
         :response_time => 200,
         :connected_links => [SPEC_DOMAIN + 'link1'],
         :depth => 1,
-        :fetched => true,
         :referer => URI(SPEC_DOMAIN + 'referer'),
         :code => 200}
     end
@@ -25,7 +23,7 @@ module Anemone
       page = Page.new
 
       page.depth.should == 0
-      page.fetched.should == false
+      page.fetched?.should == false
     end
 
     it "should create page object" do 

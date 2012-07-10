@@ -1,10 +1,8 @@
 #Export variable 
-#i.e  export MONGODB_URI=mongodb://localhost:27017/test
-#     export MONGODB_POOL_SIZE=5      
-#
+#i.e  export CRAWLER='db_config:config/mongo.yml,env:development'
 
-ENV['MONGODB_URI'] = 'mongodb://localhost:27017/test'
-ENV['MONGODB_POOL_SIZE'] = "5"
+#For test only
+ENV['CRAWLER'] = 'db_config:config/mongo.yml,env:development'
 
 require 'rubygems'
 require 'bundler/setup'
@@ -13,16 +11,12 @@ require 'anemone'
 Anemone::Page.remove
 Anemone::Link.remove
 
-['http://www.example.com/'].collect { |l|
-   Anemone::Link.enq(:url => l)
-}
+Anemone::Link.enq(:url => 'http://www.example.com/')
 
 opts = {:verbose => true, :queue_timeout => 20}
 
-
-puts "**** Start Time: #{Time.now} ****"
-puts "Process Id: #{$$}"
+puts "**** Start Time: #{Time.now} => Process Id: #{$$} ****"
 
 Anemone::Core.crawl(opts)
 
-puts "End Time: #{Time.now} ****"
+puts "**** End Time: #{Time.now} ****"
