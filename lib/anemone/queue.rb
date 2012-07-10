@@ -29,7 +29,6 @@ module Anemone
     module InstanceMethods
 
       def enq
-        #self.class.collection.update({:url => url}, self.attributes, true)
         self.save unless self.class.exists?(:url => url)
       end
 

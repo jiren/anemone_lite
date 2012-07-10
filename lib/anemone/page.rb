@@ -185,11 +185,5 @@ module Anemone
       self.first(:url => page_url.to_s)
     end
 
-    def self.process_headers(attrs)
-      attrs[:headers] ||= {}
-      attrs[:headers]['content-type'] ||= ['']
-      attrs[:headers] = Marshal.dump(attrs[:headers])
-    end
-
   end
 end
