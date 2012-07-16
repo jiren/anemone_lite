@@ -14,6 +14,7 @@ module Anemone
       field :state, :Integer
       field :start_at
       field :stop_at
+      field :page_count, :Integer, :default => 0
       field :error
 
       class << self
@@ -27,10 +28,13 @@ module Anemone
         end
 
         #Update current crawler record with stop time and error if present
-        def unregister(error = nil)
+        def unregister(page_count = 0, error = nil)
           return nil unless @crawler
 
-          @crawler.update({:state => STOPED, :stop_at => Time.now, :error => error})
+          @crawler.update({:state => STOPED, 
+                           :stop_at => Time.now, 
+                           :page_count => page_count, 
+                           :error => error})
           clear
         end
 

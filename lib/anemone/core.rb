@@ -51,7 +51,9 @@ module Anemone
       #time limit to check queue are empty
       :queue_timeout => 120,
       #Max link fetch attemps
-      :link_fetch_attemps => 3
+      :link_fetch_attemps => 3,
+      #Max limit of page crawl
+      :page_crawl_limit => (1.0/0)
     }
 
     # Create setter methods for all options to be called from the crawl block
@@ -72,6 +74,7 @@ module Anemone
       @skip_link_patterns = []
       @after_crawl_blocks = []
       @opts = opts
+      @crawl_page_count = 0
 
       yield self if block_given?
     end
@@ -91,7 +94,7 @@ module Anemone
         puts e.message
       ensure
         puts '**** Exiting ****'
-        Admin::Crawler.unregister(e)
+        Admin::Crawler.unregister(crawler.crawl_page_count, e)
       end
     end
 
@@ -175,7 +178,8 @@ module Anemone
         if page
           puts "Fetched: #{page.url}" if @opts[:verbose]
 
-          do_page_blocks page
+          #NOTE: Uncomment if do some process on every page 
+          #do_page_blocks page
           page.discard_doc!  if @opts[:discard_page_bodies]
 
           links = links_to_follow page
@@ -184,6 +188,7 @@ module Anemone
           end
 
           start_time = Time.now
+          @crawl_page_count += 1
         else
           #IF page queue empty then wait for random time.
           sleep(1.0)
@@ -191,21 +196,27 @@ module Anemone
           #If crawler idle for 3 min then check page and link queue are empty.
           #If empty then stop tentacles thread and crawler infinite loop.
           if (Time.now - start_time) > @opts[:queue_timeout]
-             
              puts "Idle for more then #{@opts[:queue_timeout]} and queues are empty." if @opts[:verbose]
-
-             if Page.queue_empty? && Link.queue_empty?
-               self.class.stop_crawler
-             end
+             self.class.stop_crawler if Page.queue_empty? && Link.queue_empty?
           end
 
           break if self.class.stop_crawler?
-
         end
+
+        if @crawl_page_count >= @opts[:page_crawl_limit]
+          self.class.stop_crawler
+          break
+        end
+
       end
 
       @tentacles.each { |thread| thread.join }
       self
+    end
+
+    #Crawl page count
+    def crawl_page_count
+      @crawl_page_count
     end
 
     private

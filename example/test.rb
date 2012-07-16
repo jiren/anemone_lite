@@ -2,7 +2,10 @@
 #i.e  export CRAWLER='db_config:config/mongo.yml,env:development'
 
 #For test only
-ENV['CRAWLER'] = 'db_config:config/mongo.yml,env:development'
+
+dir = File.expand_path(File.dirname(__FILE__))
+
+ENV['CRAWLER'] = "db_config:#{dir}/config/mongo.yml,env:development"
 
 require 'rubygems'
 require 'bundler/setup'
@@ -13,7 +16,12 @@ Anemone::Link.remove
 
 Anemone::Link.enq(:url => 'http://www.example.com/')
 
-opts = {:verbose => true, :queue_timeout => 20}
+page_crawl_limit = rand(10..20)
+puts "Page crawl limit: #{page_crawl_limit}"
+
+opts = {:verbose => true, 
+        :queue_timeout => 20, 
+        :page_crawl_limit => page_crawl_limit}
 
 puts "**** Start Time: #{Time.now} => Process Id: #{$$} ****"
 
