@@ -10,6 +10,7 @@ module Anemone
 
       base.send :field, :state, :Integer, :default => NEW 
       base.send :field, :fetched_at, :Time
+      base.send :index, :state
     end
 
     module ClassMethods
