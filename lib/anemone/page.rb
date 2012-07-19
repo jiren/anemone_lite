@@ -34,6 +34,7 @@ module Anemone
     field :parse_status, :Integer, :default => 0
 
     index :url
+    index :state
     index :parse_status, {:background => true}
 
     #

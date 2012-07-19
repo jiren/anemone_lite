@@ -11,6 +11,7 @@ module Anemone
     field :fetch_attempts, :Integer, :default => 1
     field :error
 
+    index :state
     index :url, {:unique => true}
 
     def self.[](link_url)
